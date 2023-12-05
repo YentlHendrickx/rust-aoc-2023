@@ -1,142 +1,144 @@
-#![allow(unused)]
-
-use regex::Regex;
-use std::cmp::{max, min};
-use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::io::Read;
+use std::collections::BTreeMap;
+use std::fs;
 
 fn main() {
-    solve_part_one();
-    solve_part_two();
+    let input = fs::read_to_string("./data/input.txt").unwrap();
+
+    let lowest = solve(&input, false);
+    println!("Lowest value: {}", lowest);
+
+    let lowest_range = solve(&input, true);
+    println!("Lowest range: {}", lowest_range);
 }
 
-fn read_input_file() -> Vec<String> {
-    let mut file = File::open("./data/input.txt").expect("File not found");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .expect("Error reading file");
-    contents.lines().map(|s| s.to_string()).collect()
-}
+fn solve(input: &str, part_two: bool) -> u64 {
+    // Get first line of input
+    let mut lines = input.lines();
+    let first_line = lines.next().unwrap();
+    let seeds = &first_line.split(" ").collect::<Vec<&str>>()[1..];
 
-fn solve_part_one() {
-    let input = read_input_file();
-    let number_re = Regex::new(r"(\d+)").unwrap();
-    let mut seed_numbers = number_re
-        .captures_iter(&input[0])
-        .map(|cap| cap[1].parse::<u64>().unwrap())
-        .collect::<Vec<u64>>();
+    // Now we get all of the maps
+    let mut temp_map = BTreeMap::new();
+    let mut map_key: String = String::new();
+    let mut index: u32 = 0;
+    for line in lines {
+        let map = line.split(" ").collect::<Vec<&str>>();
+        if map.len() == 1 {
+            continue;
+        }
 
-    for seed in seed_numbers.iter_mut() {
-        let mut found = false;
-        let mut i = 3;
+        // Check if the first element is not a digit to identify a new map
+        if map[0].parse::<u32>().is_err() {
+            map_key = format!("{}_{}", index, map[0]);
+            index += 1;
+            temp_map.entry(map_key.clone()).or_insert_with(Vec::new);
+        } else if let Some(vec) = temp_map.get_mut(&map_key) {
+            vec.extend_from_slice(&map);
+        } else {
+            // Handle error: No corresponding map for these values
+            eprintln!("Error: No map found for key '{}'", map_key);
+        }
+    }
 
-        while i < input.len() {
-            if !input[i].is_empty() && !found {
-                let range = number_re
-                    .captures_iter(&input[i])
-                    .map(|cap| cap[1].parse::<u64>().unwrap())
-                    .collect::<Vec<u64>>();
+    let mut final_map = BTreeMap::<&str, Vec<Vec<&str>>>::new();
 
-                if *seed >= range[1] && *seed < range[1] + range[2] {
-                    *seed = range[0] + (*seed - range[1]);
-                    found = true;
-                }
-            } else if input[i].is_empty() {
-                i += 1;
-                found = false;
+    // Loop over keys of map and display
+    for (key, value) in temp_map.iter() {
+        // Slice up values into paris of 3
+        let mut new_value = Vec::<Vec<&str>>::new();
+        let mut temp = Vec::<&str>::new();
+        for (i, val) in value.iter().enumerate() {
+            temp.push(val);
+            if (i + 1) % 3 == 0 {
+                new_value.push(temp);
+                temp = Vec::<&str>::new();
             }
-
-            i += 1;
-        }
-    }
-
-    println!("Result Part 1: {:?}", seed_numbers.iter().min().unwrap());
-}
-
-fn solve_part_two() {
-    let mut input = read_input_file();
-    input.push(String::new());
-    let number_re = Regex::new(r"(\d+)").unwrap();
-    let mut seed_numbers = number_re
-        .captures_iter(&input[0])
-        .map(|cap| cap[1].parse::<u64>().unwrap())
-        .collect::<Vec<u64>>();
-
-    let mut translation_tables = Vec::new();
-    let mut i = 3;
-
-    while i < input.len() {
-        let mut translation_table = Vec::new();
-
-        while !input[i].is_empty() {
-            let range = number_re
-                .captures_iter(&input[i])
-                .map(|cap| cap[1].parse::<u64>().unwrap())
-                .collect::<Vec<u64>>();
-            translation_table.push(range);
-            i += 1;
         }
 
-        translation_tables.push(translation_table);
-        i += 2;
+        // Store new vlaues into map
+        final_map.insert(key, new_value);
     }
 
-    let mut current_ranges = HashSet::new();
+    let mut lowest_number = u64::MAX;
 
-    for chunk in seed_numbers.chunks(2) {
-        current_ranges.insert((chunk[0], chunk[0] + chunk[1] - 1));
-    }
+    // Loop over seeds
+    // BRUTE FORCE FOR PART 2 BECAUSE I'M LAZY
+    let start_index = 0;
 
-    for table in translation_tables.iter() {
-        let mut table_splits = HashSet::new();
+    let end_index = seeds.len() - 2;
+    let mut index: u32 = 0;
 
-        for range in current_ranges.iter() {
-            let mut range_splits = HashSet::new();
-            range_splits.insert(*range);
+    for i in start_index..end_index {
+        if index > (seeds.len() - 2) as u32 {
+            break;
+        }
 
-            for line in table.iter() {
-                let mut line_splits = HashSet::new();
+        let seeds_list = if part_two {
+            process_seeds(&seeds, index)
+        } else {
+            seeds.iter().map(|&s| s.to_string()).collect()
+        };
 
-                for range_split in range_splits.iter() {
-                    if range_split.1 > line[1] && line[1] + line[2] >= range_split.1
-                        || line[1] + line[2] < range_split.1 && range_split.0 < line[1] + line[2]
-                    {
-                        if range_split.0 < line[1] {
-                            line_splits.insert((range_split.0, line[1] - 1));
-                        }
+        index += 2;
 
-                        let overlap = (
-                            range_split.0.max(line[1]),
-                            range_split.1.min(line[1] + line[2] - 1),
-                        );
-                        table_splits.insert((
-                            line[0] + (overlap.0 - line[1]),
-                            line[0] + (overlap.1 - line[1]),
-                        ));
+        // Loop over seeds
+        for seed in seeds_list.iter() {
+            // println!("Seed: {}", seed);
 
-                        if range_split.1 > line[1] + line[2] - 1 {
-                            line_splits.insert((line[1] + line[2] - 1, range_split.1));
-                        }
-                    } else {
-                        line_splits.insert(*range_split);
+            // Loop over maps
+            let mut current_value = seed.parse::<u64>().unwrap();
+            for (key, value) in final_map.iter() {
+                // println!("Key: {}", key);
+
+                for val in value.iter() {
+                    // The range is specified by the finaly value
+                    let dest_lower = val[0].parse::<u64>().unwrap();
+                    let source_lower = val[1].parse::<u64>().unwrap();
+                    let range_size = val[2].parse::<u64>().unwrap();
+
+                    let source_upper = source_lower + range_size - 1;
+
+                    if current_value >= source_lower && current_value <= source_upper {
+                        // Seed is within the source range, update current_value
+                        let offset = current_value - source_lower;
+                        // /*   println!(
+                        //     "Seed value: {}, source_lower: {}, offset: {}",
+                        //     current_value, source_lower, offset
+                        // ); */
+                        current_value = dest_lower + offset;
+                        // println!("Current value: {}", current_value);
+                        break; // Exit the loop as we found a match
                     }
                 }
+            }
+            if current_value < lowest_number {
+                lowest_number = current_value;
+            }
+        }
+    }
+    return lowest_number;
+}
 
-                range_splits = line_splits.clone();
-                line_splits.clear();
+fn process_seeds(seeds: &[&str], index: u32) -> Vec<String> {
+    let mut new_seeds_vec = Vec::new();
+    let mut start_val: u64 = 0;
+
+    let mut count = 1;
+
+    for seed in index..(index + 2) {
+        if count == 1 {
+            start_val = seeds[seed as usize].parse::<u64>().unwrap();
+            count += 1;
+        } else {
+            let range_val = start_val + seeds[seed as usize].parse::<u64>().unwrap();
+
+            for i in start_val..=range_val {
+                new_seeds_vec.push(i.to_string());
             }
 
-            table_splits.extend(range_splits.clone());
-            range_splits.clear();
+            count = 1;
         }
-
-        current_ranges = table_splits.clone();
-        table_splits.clear();
     }
 
-    println!(
-        "Result Part 2: {}",
-        current_ranges.iter().map(|x| x.0).min().unwrap()
-    );
+    return new_seeds_vec;
 }
