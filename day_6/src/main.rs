@@ -35,17 +35,13 @@ fn solve_2(input: &str) -> f64 {
 fn solve_1(input: &str) -> u64 {
     let (times, distances) = extract_input(input, false);
 
-    // Convert times to u64
-    let times = times.iter().map(|&x| x as u64).collect::<Vec<u64>>();
-    let distances = distances.iter().map(|&x| x as u64).collect::<Vec<u64>>();
-
     // Loop over all times
     let mut total_product = 1;
     for (i, time) in times.iter().enumerate() {
         let mut win_count = 0;
-        for value in 1..*time {
-            let distance = value * (time - value);
-            if distance > distances[i] {
+        for value in 1..(*time as u64) {
+            let distance = value * ((*time as u64) - value);
+            if distance > distances[i] as u64 {
                 win_count += 1;
             }
         }
