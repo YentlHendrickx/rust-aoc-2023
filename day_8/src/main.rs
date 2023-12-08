@@ -91,7 +91,7 @@ fn solve_2(input: &str) -> u64 {
     }
 
 /*     println!(
-        "{:?}, we have an Lowest Common Multiple of {}",
+        "{:?}, we have a Lowest Common Multiple of {}",
         all_steps, current_lcm
     ) */;
 
@@ -111,13 +111,11 @@ fn lcm(a: u64, b: u64) -> u64 {
 }
 
 fn get_left_right(input: &str) -> Vec<char> {
-    // Get first line of input (seperated by new line) then push to vec
     return input.lines().nth(0).unwrap().chars().collect();
 }
 
 fn get_map(input: &str) -> HashMap<String, Vec<String>> {
     let mut map: HashMap<String, Vec<String>> = HashMap::new();
-    let mut first_element: String = String::new();
 
     for lines in input.lines().skip(2).into_iter() {
         let split: Vec<&str> = lines.split(" ").collect();
@@ -125,10 +123,6 @@ fn get_map(input: &str) -> HashMap<String, Vec<String>> {
         let left_side = split[0].to_string();
         let first_right = split[2].trim().replace(",", "").replace("(", "");
         let second_right = split[3].trim().replace(")", "");
-
-        if first_element.is_empty() {
-            first_element = left_side.clone();
-        }
 
         // println!("{} -> {}, {}", left_side, first_right, second_right);
 
