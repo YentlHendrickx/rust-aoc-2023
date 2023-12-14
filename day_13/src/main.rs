@@ -1,7 +1,5 @@
 use std::fs;
 
-mod backup;
-
 fn main() {
     let input = fs::read_to_string("./data/input.txt").unwrap();
     let parsed = parse_input(&input);
