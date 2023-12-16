@@ -27,12 +27,21 @@ fn main() {
     println!("part 2: {}", result);
 }
 
+fn part_1(input: &Vec<Instruction>) -> u32 {
+    let mut result: u32 = 0;
+
+    for instruction in input {
+        result += instruction.full_hash;
+    }
+
+    return result;
+}
+
 fn part_2(input: &Vec<Instruction>) -> u32 {
     let mut result = 0;
 
     let box_map = perform_instruction(&input);
 
-    // Now we ned to loop over the box map and calculate the focusing power
     for (i, (_, box_contents)) in box_map.iter().sorted().enumerate() {
         let mut focal_power = 0;
         for (j, lens) in box_contents.iter().enumerate() {
@@ -51,14 +60,11 @@ fn perform_instruction(input: &Vec<Instruction>) -> HashMap<u32, Vec<Lens>> {
         box_map.insert(i, Vec::new());
     }
 
-    // Loop over all input instructions
     for instruction in input {
-        // We remove the lens with the label in the box
         let current_box = box_map.get_mut(&instruction.location).unwrap();
         let mut box_copy: Vec<Lens> = Vec::new();
 
         if instruction.operator == '-' {
-            // Try to find the lenses with the same label as the instruction don't add those to new box contents
             for lens in current_box {
                 if lens.label == instruction.lens.label {
                     continue;
@@ -67,17 +73,8 @@ fn perform_instruction(input: &Vec<Instruction>) -> HashMap<u32, Vec<Lens>> {
                 box_copy.push(lens.clone());
             }
 
-            // Replace the box contents with the new box contents
             box_map.insert(instruction.location, box_copy);
         } else if instruction.operator == '=' {
-            // If empty, add it
-            if current_box.len() == 0 {
-                box_copy.push(instruction.lens.clone());
-                box_map.insert(instruction.location, box_copy);
-                continue;
-            }
-
-            // Find the lens and replace it with the new lens
             let mut added = false;
             for lens in current_box {
                 if lens.label == instruction.lens.label {
@@ -99,16 +96,6 @@ fn perform_instruction(input: &Vec<Instruction>) -> HashMap<u32, Vec<Lens>> {
     return box_map;
 }
 
-fn part_1(input: &Vec<Instruction>) -> u32 {
-    let mut result = 0;
-
-    for instruction in input {
-        result += instruction.full_hash;
-    }
-
-    return result;
-}
-
 fn make_hash(input: &Vec<u8>) -> u32 {
     let mut result: u32 = 0;
 
@@ -122,17 +109,14 @@ fn make_hash(input: &Vec<u8>) -> u32 {
 }
 
 fn parse_input(input: &str) -> Vec<Instruction> {
+    let mut parsed: Vec<Instruction> = Vec::new();
     let split = input.split(",");
 
-    let mut parsed: Vec<Instruction> = Vec::new();
-
     for s in split {
-        // Get substring from 0 to '-' or '='
         let split_instruction = s.split_at(s.find("-").unwrap_or(s.find("=").unwrap_or(0)));
 
         let label = split_instruction.0;
         let location = make_hash(&label.as_bytes().to_vec());
-
         let operator = split_instruction.1.chars().nth(0).unwrap();
 
         let mut focal_length: i32 = 0;
