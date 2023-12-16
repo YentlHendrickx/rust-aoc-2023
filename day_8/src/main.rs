@@ -49,7 +49,7 @@ fn solve_2(input: &str) -> u64 {
 
     let mut end_elements = Vec::new();
     let mut start_elements = Vec::new();
-    // Loop over all elements
+
     for (key, _value) in map.iter() {
         if key.ends_with("A") {
             start_elements.push(key);
@@ -84,14 +84,13 @@ fn solve_2(input: &str) -> u64 {
         all_steps.push(steps);
     }
 
-    // Now we find the LCM of all the results
     let mut current_lcm = all_steps[0];
     for i in 1..all_steps.len() {
         current_lcm = lcm(current_lcm, all_steps[i]);
     }
 
 /*     println!(
-        "{:?}, we have a Lowest Common Multiple of {}",
+        "{:?}, we have a Lowest Common Multiple (LCM) of {}"
         all_steps, current_lcm
     ) */;
 
