@@ -61,7 +61,7 @@ fn solve(grid: &Vec<Vec<char>>, part_two: bool) -> u64 {
     vertices.insert((grid[0].len() as u32 - 2, grid.len() as u32 - 1));
 
     // Next we need to find the distances between all vertices using BFS
-    let mut dist_map: HashMap<((u32, u32), (u32, u32)), u64> = HashMap::new();
+    let mut dist_map: HashMap<(u32, u32), Vec<((u32, u32), u64)>> = HashMap::new();
 
     // BFS
     // Loop over vertices 2 at a time
@@ -88,7 +88,14 @@ fn solve(grid: &Vec<Vec<char>>, part_two: bool) -> u64 {
             // Check if we are at a vertex
             if vertices.contains(&(x, y)) && (x, y) != (*x_p, *y_p) {
                 // Add to the distance map
-                dist_map.insert(((*x_p, *y_p), (x, y)), dist);
+                if dist_map.contains_key(&(*x_p, *y_p)) {
+                    dist_map
+                        .get_mut(&(*x_p, *y_p))
+                        .unwrap()
+                        .push(((x, y), dist));
+                } else {
+                    dist_map.insert((*x_p, *y_p), vec![((x, y), dist)]);
+                }
                 continue;
             }
 
@@ -123,18 +130,13 @@ fn solve(grid: &Vec<Vec<char>>, part_two: bool) -> u64 {
 
     // DFS TIME!
 
-    let mut queue: LinkedList<(
-        ((u32, u32), (u32, u32)),
-        u64,
-        HashSet<((u32, u32), (u32, u32))>,
-    )> = LinkedList::new();
-    let mut visited: HashSet<((u32, u32), (u32, u32))> = HashSet::new();
+    let mut queue: LinkedList<((u32, u32), u64, HashSet<(u32, u32)>)> = LinkedList::new();
+    let visited: HashSet<(u32, u32)> = HashSet::new();
 
     // Add all postions to the queue that are connected to the start
-    for ((vert_1, vert_2), dist) in dist_map.iter() {
-        if *vert_1 == (1, 0) {
-            queue.push_back(((*vert_1, *vert_2), *dist, visited.clone()));
-        }
+    // Get start position from dist map
+    for (vert_2, dist) in dist_map.get(&(1, 0)).unwrap() {
+        queue.push_back((*vert_2, *dist, visited.clone()));
     }
 
     let result = dfs(
@@ -147,45 +149,41 @@ fn solve(grid: &Vec<Vec<char>>, part_two: bool) -> u64 {
 }
 
 fn dfs(
-    queue: &mut LinkedList<(
-        ((u32, u32), (u32, u32)),
-        u64,
-        HashSet<((u32, u32), (u32, u32))>,
-    )>,
-    dist_map: &HashMap<((u32, u32), (u32, u32)), u64>,
+    queue: &mut LinkedList<((u32, u32), u64, HashSet<(u32, u32)>)>,
+    dist_map: &HashMap<(u32, u32), Vec<((u32, u32), u64)>>,
     // visited: &mut HashSet<((u32, u32), (u32, u32))>,
     end_location: (u32, u32),
 ) -> u64 {
     let mut result = 0;
     while !queue.is_empty() {
-        let ((vert_1, vert_2), dist, visited) = queue.pop_front().unwrap();
+        let (vert, dist, visited) = queue.pop_front().unwrap();
         let mut visited = visited.clone();
 
-        if dist > result && vert_2 == end_location {
+        if dist > result && vert == end_location {
             result = dist;
-            println!("New max: {}", result);
         }
 
         // Check if we have already visited this node
-        if visited.contains(&(vert_1, vert_2)) {
+        if visited.contains(&vert) {
             continue;
         }
 
         // Mark as visited
-        visited.insert((vert_1, vert_2));
+        visited.insert(vert);
 
         // Find all the next vertices
-        for ((next_vert_1, next_vert_2), next_dist) in dist_map.iter() {
-            if *next_vert_1 == vert_2 && next_vert_2 != &vert_1 {
-                queue.push_back((
-                    (*next_vert_1, *next_vert_2),
-                    dist + next_dist,
-                    visited.clone(),
-                ));
+        for (next_vert, next_dist) in dist_map.get(&vert).unwrap_or(&vec![((0, 0), 0)]).iter() {
+            if next_vert == &(0, 0) {
+                break;
             }
+
+            if visited.contains(&(*next_vert)) {
+                continue;
+            }
+            queue.push_back((*next_vert, dist + next_dist, visited.clone()));
         }
 
-        visited.remove(&(vert_1, vert_2));
+        visited.remove(&vert);
     }
 
     return result;
